@@ -379,11 +379,10 @@ class CointegrationStrategyFactory():
                            'RF','SPGI','STT','SIVB','SYF','TROW','HIG','TRV','TFC','USB','WRB','WFC','ZION',],
             'barge_companies': ['AEP', 'NBR', 'TDW', 'TRGP', 'CNX', 'KEX', 'HCC', 'GBX', 'MPC', 'MATX'],
             'test': ['AAL','ALK','ALLE','AOS','DAL','DE','DOV','ETN','FAST','FTV','GE','IEX','JCI','LDOS','LUV','NOC','PCAR','SWK','UAL','URI','WAB'],
-            'food': ['CF', 'NTR', 'MOS', 'ADM']
-
-
-
-
+            'food': ['CF', 'NTR', 'MOS', 'ADM'],
+            'global_developed_markets': ['VEA', 'IEFA', 'EFA', 'BNDX', 'VCIT', 'VCSH', 'IXUS',
+                                         'SCHF', 'VT', 'IGSB', 'ACWI', 'EFV', 'MINT', 'GDX', 'SPDW',
+                                         'IGIB', 'FLOT', 'SRLN', 'BBEU', 'EFG', 'SMH', 'GUNR', 'VSS', 'FNDF'],
 
 
         }

@@ -138,7 +138,7 @@ class CointegrationLiveTester():
 
             bt.run_backtest_up_to_today()
 
-            bt.live_trade(self.live_test_start_date)
+            bt.live_trade(self.live_test_start_date, verbose=True)
 
             self.open_trades = self.open_trades.append(bt.open_trades_df, ignore_index=True)
 
