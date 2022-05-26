@@ -27,6 +27,18 @@ class FileManager():
 
         self.data = pd.read_csv(f'{self._root_dir}/{symbol}.csv', index_col='Date', parse_dates=True)
 
+        if len(self.data) == 0:
+
+            print(f"File Manager Error: No data for {symbol}. Trying to download one more time")
+
+            self._download_symbol_data(symbol)
+
+            self.data = pd.read_csv(f'{self._root_dir}/{symbol}.csv', index_col='Date', parse_dates=True)
+
+            if len(self.data) == 0:
+
+                print(f"File Manager Error: Still no data for {symbol}")
+
         # If the date is not none then we use an end date, otherwise we bring the last date
         if end_date is not None:
 

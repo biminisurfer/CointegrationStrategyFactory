@@ -353,7 +353,7 @@ class CointegrationStrategyFactory():
             'micro_metals_mining': ['GORO', 'MSB', 'SYNL', 'ZEUS'],
             'industrials': ['MMM', 'AOS', 'ALK','ALLE','AAL','AME','BA','CHRW','CAT','CTAS','CPRT','CSX','CMI','DE',
                             'DAL','DOV','ETN','EMR','EFX','EXPD','FAST','FDX','FTV','FBHS','GD','GE','HON','HWM','HII','IEX',
-                            'ITW','JBHT','J','JCI','LHX','LDOS','LMT','MAS','NLSN','NSC','NOC','ODFL','PCAR','PH','PNR',
+                            'ITW','JBHT','J','JCI','LHX','LDOS','LMT','MAS','NLSN','NSC','NOC','ODFL','PH','PNR',
                             'PWR','RTX','RSG','RHI','ROK','ROL','ROP','SNA','LUV','SWK','TXT','TT','TDG','UNP','UAL','UPS','URI',
                             'VRSK','GWW','WAB','WM','XYL'],
             'energy': ['APA','BKR','CVX','COP','CTRA','DVN','FANG','EOG','XOM','HAL','HES','MRO','MPC','OXY','OKE','PSX',
@@ -379,11 +379,10 @@ class CointegrationStrategyFactory():
                            'RF','SPGI','STT','SIVB','SYF','TROW','HIG','TRV','TFC','USB','WRB','WFC','ZION',],
             'barge_companies': ['AEP', 'NBR', 'TDW', 'TRGP', 'CNX', 'KEX', 'HCC', 'GBX', 'MPC', 'MATX'],
             'test': ['AAL','ALK','ALLE','AOS','DAL','DE','DOV','ETN','FAST','FTV','GE','IEX','JCI','LDOS','LUV','NOC','PCAR','SWK','UAL','URI','WAB'],
-            'food': ['CF', 'NTR', 'MOS', 'ADM']
-
-
-
-
+            'food': ['CF', 'NTR', 'MOS', 'ADM'],
+            'global_developed_markets': ['VEA', 'IEFA', 'EFA', 'BNDX', 'VCIT', 'VCSH', 'IXUS',
+                                         'SCHF', 'VT', 'IGSB', 'ACWI', 'EFV', 'MINT', 'GDX', 'SPDW',
+                                         'IGIB', 'FLOT', 'SRLN', 'BBEU', 'EFG', 'SMH', 'GUNR', 'VSS', 'FNDF'],
 
 
         }
