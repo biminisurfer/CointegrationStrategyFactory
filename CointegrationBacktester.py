@@ -156,6 +156,7 @@ class CointegrationBacktester():
         self.max_allowable_drawdown = 0
         self.live_trade_start_date = None
         self.broker = None
+        self.live_trading = False
 
 
     def configure(self, data, download_new_data=True):
@@ -240,6 +241,7 @@ class CointegrationBacktester():
             'commission': self.cost_per_trade,
             'max_allowable_allocation': self.max_allowable_allocation
         })
+
 
 
     def reset(self):
@@ -420,7 +422,7 @@ class CointegrationBacktester():
 
         self.shares = []
         for symbol in self.symbols:
-            print(symbol)
+            self._message(symbol)
             columns.append(symbol + '_price')
             columns.append(symbol + '_qty')
             self.shares.append(0)
@@ -567,7 +569,8 @@ class CointegrationBacktester():
         self._message(f"Total purchase cost: {total_purchase_cost}")
 
         if total_purchase_cost > self.cash:
-            sys.exit(f"Total purchase cost of {total_purchase_cost} exceeds cash of {self.cash}, bugging out")
+
+            print(f"Backtester: Total purchase cost of {total_purchase_cost} exceeds cash of {self.cash}, bugging out")
 
 
 
@@ -822,6 +825,7 @@ class CointegrationBacktester():
             else:
 
                 self._close_positions()
+                self.broker.execute_orders(self.date)
 
         else:
 
@@ -843,6 +847,8 @@ class CointegrationBacktester():
 
                     self.open_position(self.previous_bar['position_signal'])
 
+                    self.broker.execute_orders(self.date)
+
                 else:
 
                     self._update_positions()
@@ -859,11 +865,15 @@ class CointegrationBacktester():
 
                     self._close_positions()
 
+                    self.broker.execute_orders(self.date)
+
                 elif self.previous_bar['position_signal'] == -1 and self.position == 1:
 
                     self._message("We are in long position and the signal is telling us to go flat, Closing long position")
 
                     self._close_positions()
+
+                    self.broker.execute_orders(self.date)
 
                 else:
 
@@ -874,8 +884,6 @@ class CointegrationBacktester():
             else:
 
                 sys.exit("Incorrect position signal. Check for error")
-
-        self.broker.clear_orders()
 
         self.bar.at['equity'] = self.equity
 
@@ -903,6 +911,8 @@ class CointegrationBacktester():
             else:
 
                 self._message("Closing all positions")
+
+                self.broker.place_orders_to_close_all_positions(self.date)
 
         else:
 
@@ -937,10 +947,16 @@ class CointegrationBacktester():
                     self._message(
                         f"We are in short position and the signal is telling us to go flat. Closing short position")
 
+                    self.broker.place_orders_to_close_all_positions(self.date)
+
+
                 elif position_signal == -1 and self.position == 1:
 
                     self._message(
                         "We are in long position and the signal is telling us to go flat, Closing long position")
+
+                    self.broker.place_orders_to_close_all_positions(self.date)
+
 
                 else:
 
@@ -1046,8 +1062,9 @@ class CointegrationBacktester():
             df['open_profit'] = (df['close_price'] - df['open_price']) * df['quantity']
 
 
+    def run_backtest_2(self, print_summary=True, verbose=False, max_allowable_drawdown=None, live_trading=False):
 
-    def run_backtest_2(self, print_summary=True, verbose=False, max_allowable_drawdown=None):
+        self.live_trading = live_trading
 
         self.bar = None
 
@@ -1059,12 +1076,18 @@ class CointegrationBacktester():
 
         self.trading_day = 0
 
-        print(f"Max Allowable DD in run_backtest_2: {max_allowable_drawdown}")
 
-        if max_allowable_drawdown is None:
-            self._set_max_allowable_drawdown(self.start_date, self.is_end_date)
-        else:
-            self.max_allowable_drawdown = max_allowable_drawdown
+
+        self._message(f"Max Allowable DD in run_backtest_2: {max_allowable_drawdown}")
+
+        if not self.live_trading:
+
+            if max_allowable_drawdown is None:
+                self._set_max_allowable_drawdown(self.start_date, self.is_end_date)
+            else:
+                self.max_allowable_drawdown = max_allowable_drawdown
+
+                self._message(f"Confirm max allowable drawdown is: {self.max_allowable_drawdown}")
 
         for index in self.model_dataset[self.start_date:].index:
 
@@ -1131,7 +1154,8 @@ class CointegrationBacktester():
         else:
             # Here we get the max daily drawdown of the in sample period
 
-            self._set_max_allowable_drawdown(self.start_date, self.is_end_date)
+            if not self.live_trading:
+                self._set_max_allowable_drawdown(self.start_date, self.is_end_date)
 
             today_equity = self.bar['equity']
             yesterdays_equity = self.previous_bar['equity']
@@ -1162,14 +1186,16 @@ class CointegrationBacktester():
 
     def _set_max_allowable_drawdown(self, start_date, end_date):
 
+        self._message("Setting max allowable drawdown")
+
+        self._message(f"drawdown_filter_multiplier is set to: {self._drawdown_filter_multiplier}")
+
         if self._drawdown_filter_multiplier == None:
             self.max_allowable_drawdown = -100000
         else:
             drawdown = self._get_drawdown(start_date, end_date)
             self.max_allowable_drawdown = self._drawdown_filter_multiplier * drawdown
-
-
-
+        self._message(f"Max allowable drawdown: {self.max_allowable_drawdown}")
 
 
     def _get_results(self, start_date, end_date):
@@ -1237,6 +1263,7 @@ class CointegrationBacktester():
 
                 ]
         print(tabulate(data, headers=["Item", "value", "Item", "Value"]))
+
 
         print("")
         print("____________________________ Hypothesis Test _________________________________")
@@ -2126,17 +2153,19 @@ class CointegrationBacktester():
         return reg[0]
 
 
-    def run_backtest_up_to_today(self):
+    def run_backtest_up_to_today(self, print_summary=False):
 
         self.force_download = True
 
         self.os_end_date = self._get_last_day_of_stock_data(self.symbols[0])
 
+        self.os_end_date = '2022-5-19'
+
         self.reset()
 
-        print(f"Max ALlowable DD: {self.max_allowable_drawdown}")
+        self._message(f"Max ALlowable DD: {self.max_allowable_drawdown}")
 
-        self.run_backtest_2()
+        self.run_backtest_2(print_summary=print_summary)
 
 
     def live_trade(self, start_date, verbose=False):
@@ -2153,9 +2182,9 @@ class CointegrationBacktester():
 
         self.reset()
 
-        print(f"Max ALlowable DD: {self.max_allowable_drawdown}")
+        self._message(f"Max ALlowable DD: {self.max_allowable_drawdown}")
 
-        self.run_backtest_2(max_allowable_drawdown=self.max_allowable_drawdown, verbose=verbose)
+        self.run_backtest_2(max_allowable_drawdown=self.max_allowable_drawdown, verbose=verbose, live_trading=True)
 
         self.print_live_trade_orders()
 
@@ -2184,9 +2213,13 @@ class CointegrationBacktester():
 
         fm = FileManager()
 
+        print(f"Symbol: {symbol}, start_date: {self.start_date}, end_date: {None}")
+
         fm.get_data(symbol=symbol, start_date=self.start_date, end_date=None)
 
         last_datetime = fm.data.iloc[-1].name.strftime('%Y-%m-%d')
+
+        print(f"Last_datetime: {last_datetime}")
 
         return last_datetime
 
