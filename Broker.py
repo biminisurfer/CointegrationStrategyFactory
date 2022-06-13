@@ -181,6 +181,20 @@ class Broker:
             self._position_signal = position_signal
 
             shares = math.floor(self.initial_vectors[index] * vector_multiplier) * position_signal
+
+            # Here we set the algo to purchase at least one share so if the shares are zero we set to the sign
+            # of the vector times the position signal
+
+            if shares == 0:
+
+                if self.initial_vectors[index] < 0:
+
+                    shares = -1 * position_signal
+
+                elif self.initial_vectors[index] > 0:
+
+                    shares = position_signal
+
             open_price = self.bar[f"{symbol}_open"]
             purchase_cost = abs(shares * open_price)
             total_purchase_cost = total_purchase_cost + purchase_cost
@@ -206,7 +220,7 @@ class Broker:
 
         if total_purchase_cost > total_cash_available:
 
-            print(f"Broker Model: Total purchase cost of {total_purchase_cost} exceeds cash of {total_cash_available}, bugging out")
+            print(f"Broker Model: Total purchase cost of {total_purchase_cost} exceeds cash of {total_cash_available}")
 
 
 

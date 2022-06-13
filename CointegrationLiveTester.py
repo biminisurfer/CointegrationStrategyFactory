@@ -6,7 +6,11 @@ from tabulate import tabulate
 
 from IPython.display import display
 from scipy.stats import ttest_ind
+
 import numpy as np
+import copy
+
+from PerformanceMeasurements import PerformanceMeasurements
 
 '''
 This class loads the CointegrationStrategyFactory and then uses the data to create a live test
@@ -40,6 +44,7 @@ class CointegrationLiveTester():
         self._max_allowable_allocation = data['max_allowable_allocation']
         self._initial_cash = data['initial_cash']
 
+
         self.is_end_date = None
         self.backtests = []
         self.os_data = pd.DataFrame()
@@ -58,7 +63,8 @@ class CointegrationLiveTester():
         self._load_sf_from_file()
         self._filter_non_stopped_out_strategies()
         # self._combine_strategies()
-
+        self.backtests_up_to_today = []
+        self.backtests_live_trade = []
 
         self._get_backtest_df()
         self._get_symbols_from_backtests()
@@ -69,11 +75,15 @@ class CointegrationLiveTester():
 
     def _load_sf_from_file(self):
 
+        print("Loading Saved Strategy from File")
+
         file_pi2 = open(f'savedStrategies/{self._filename}.obj', 'rb')
         self.sf = pickle.load(file_pi2)
         self.is_end_date = self.sf._in_sample_end_date
 
     def _filter_non_stopped_out_strategies(self):
+
+        print("Filtering out non-stopped out strategies")
 
         for bt in self.sf._best_iteration_backtests:
 
@@ -118,18 +128,72 @@ class CointegrationLiveTester():
         self.is_max_drawdown = self._get_max_drawdown(self.is_data['total'], len(self.is_data['total']))
         self.os_max_drawdown = self._get_max_drawdown(self.os_data['total'], len(self.os_data['total']))
 
+        pm = PerformanceMeasurements()
+
+        self.os_start_equity = self.os_data['total'][0]
+        self.os_end_equity = self.os_data['total'][-1]
+        self.os_profit = self.os_end_equity - self.os_start_equity
+        self.os_total_return = self.os_profit / self.os_start_equity
+        self.os_total_days = (self.os_data.iloc[-1].name - self.os_data.iloc[0].name).days
+        self.os_daily_return = self.os_total_return / self.os_total_days
+        self.os_annualized_return = ((1 + self.os_daily_return) ** 365) - 1
+
+        if self.os_max_drawdown == 0:
+            self.os_return_over_max_drawdown = 0
+        else:
+            self.os_return_over_max_drawdown = self.os_total_return / -self.os_max_drawdown
+
+        if self.os_daily_std == 0:
+            self.os_sharpe_ratio = 0
+            self.os_daily_sharpe_ratio = 0
+
+        else:
+            self.os_daily_sharpe_ratio = self.os_mean_daily_return / self.os_daily_std
+            self.os_sharpe_ratio = self.os_daily_sharpe_ratio * (252 ** 0.5)
+
     def print_summary(self):
 
+
+
+        print("OS Performance")
+
+        data = [
+
+            ["Total Profit", self.os_profit],
+            ["Total Return", self.os_total_return],
+            ["Annualized Return", self.os_annualized_return],
+            ["Sharpe Ratio", self.os_sharpe_ratio],
+            ["Return Over Max Drawdown", self.os_return_over_max_drawdown],
+
+            ["Max Drawdown", self.os_max_drawdown],
+
+
+
+            ["Start Equity", self.os_start_equity],
+            ["End Equity", self.os_end_equity],
+            ["Total Days Trading", self.os_total_days],
+            ["Daily Return", self.os_daily_return],
+
+        ]
+        print(tabulate(data, headers=["OS Metric", "Value"]))
+
         print("")
+
+        print("IS vs. OS Comparison")
 
         data = [
 
             ["Mean Daily Return", self.is_mean_daily_return, self.os_mean_daily_return, self.os_mean_daily_return - self.is_mean_daily_return],
+
             ["Mean Daily Std", self.is_daily_std, self.os_daily_std, self.os_daily_std - self.is_daily_std],
             ["Max Drawdown", self.is_max_drawdown, self.os_max_drawdown, self.os_max_drawdown - self.is_max_drawdown],
 
+            # ["Total Trades", self.in_sample_trades, self.os_max_drawdown, self.os_max_drawdown - self.is_max_drawdown],
+
         ]
         print(tabulate(data, headers=["Item", "In Sample", "Out Sample", "Variance"]))
+
+
 
     def print_summaries(self):
 
@@ -139,12 +203,16 @@ class CointegrationLiveTester():
 
     def _get_backtest_df(self):
 
+        print("Getting backtest df")
+
         for bt in self.backtests:
 
             self.backtest_df = self.backtest_df.append(bt.__dict__, ignore_index=True)
 
 
     def _get_symbols_from_backtests(self):
+
+        print("Getting symbols from backtests")
 
         live_test_symbols = []
 
@@ -158,6 +226,8 @@ class CointegrationLiveTester():
         self.symbols = live_test_symbols
 
     def _create_price_df(self):
+
+        print("Creating Price Dataframe")
 
         price_df = pd.DataFrame()
 
@@ -173,13 +243,14 @@ class CointegrationLiveTester():
 
     def _filter_backtests(self):
 
+        print("Filtering backtests")
+
         # Here we only use the top 5 backtests
         self.backtest_df = self.backtest_df.sort_values('reward_risk_ratio', ascending=False).head(self._max_backtests)
 
         backtests = []
 
         for index, bt in self.backtest_df.iterrows():
-            print(index)
 
             backtests.append(self.backtests[index])
 
@@ -203,6 +274,26 @@ class CointegrationLiveTester():
 
         return max_daily_drawdown.min()
 
+    def get_current_positions(self):
+
+        array = []
+
+        df = self.open_trades
+
+        print("Current Positions")
+
+        symbols = df.symbol.unique()
+
+        for symbol in symbols:
+            quantity = df[df['symbol'] == symbol]['quantity'].sum()
+
+            array.append({
+                'symbol': symbol,
+                'quantity': quantity
+            })
+
+        return pd.DataFrame(array)
+
 
     def get_target_positions(self):
 
@@ -222,28 +313,31 @@ class CointegrationLiveTester():
 
         open_trade_summary_df = pd.DataFrame()
 
-        open_trade_summary_df['symbol'] = self.open_trades.symbol.unique()
+        if len(self.open_trades) > 0:
 
-        for index, row in open_trade_summary_df.iterrows():
-            symbol = row.symbol
 
-            current_quantity_in_portfolio = self.open_trades[self.open_trades['symbol'] == symbol]['quantity'].sum()
+            open_trade_summary_df['symbol'] = self.open_trades.symbol.unique()
 
-            if len(order_summary) == 0:
+            for index, row in open_trade_summary_df.iterrows():
+                symbol = row.symbol
 
-                order_amount = 0
+                current_quantity_in_portfolio = self.open_trades[self.open_trades['symbol'] == symbol]['quantity'].sum()
 
-            else:
+                if len(order_summary) == 0:
 
-                order_amount = order_summary[order_summary['symbol'] == symbol]['shares'].sum()
+                    order_amount = 0
 
-            target_quantity = current_quantity_in_portfolio + order_amount
+                else:
 
-            array.append({
-                'symbol': row.symbol,
-                'target_quantity': target_quantity
+                    order_amount = order_summary[order_summary['symbol'] == symbol]['shares'].sum()
 
-            })
+                target_quantity = current_quantity_in_portfolio + order_amount
+
+                array.append({
+                    'symbol': row.symbol,
+                    'target_quantity': target_quantity
+
+                })
 
         return pd.DataFrame(array)
 
@@ -256,6 +350,7 @@ class CointegrationLiveTester():
         symbols = self.orders.symbol.unique()
 
         for symbol in symbols:
+
             shares = self.orders[self.orders['symbol'] == symbol]['shares'].sum()
 
             array.append({
@@ -297,6 +392,8 @@ class CointegrationLiveTester():
         print(f"Simulations: {simulations}")
 
         returns = self.is_data['total'].pct_change()
+        # returns = self.os_data['total'].pct_change()
+
         return_summary = returns.describe()
 
         for simulation in range(simulations):
@@ -377,11 +474,16 @@ class CointegrationLiveTester():
             'null_hypothesis': null_hypothesis
         }
 
+
     def run(self, print_backtest_summary=False):
+
+        print("Running Live Tester")
 
         self._filter_backtests()
 
         index = 0
+
+        print(f"Total Strategy Components: {len(self.backtests)}")
 
         for bt in self.backtests:
 
@@ -392,16 +494,23 @@ class CointegrationLiveTester():
             print("Run Backtest Up To Today")
             bt.run_backtest_up_to_today(print_summary=print_backtest_summary)
 
-            self.is_data[f'bt_{index}_equity'] = bt.model_dataset['equity']
+            # new_bt = copy.deepcopy(bt)
+            # self.backtests_up_to_today.append(new_bt)
+
+            # Here we add the trades from the backtest to the trade ledger
+            if len(bt.trade_ledger) > 0:
+                self.trade_ledger = self.trade_ledger.append(
+                    bt.trade_ledger[bt.trade_ledger['close_date'] >= self.live_test_start_date], ignore_index=True)
+
+            self.is_data[f'bt_{index}_equity'] = bt.model_dataset['equity'][:self.is_end_date]
 
             print("Live Trade")
-            bt.live_trade(self.live_test_start_date)
+
+            bt.live_trade(self.live_test_start_date, print_summary=print_backtest_summary)
+
+            # self.backtests_live_trade.append(bt)
 
             self.open_trades = self.open_trades.append(bt.open_trades_df, ignore_index=True)
-
-            if len(bt.trade_ledger) > 0:
-
-                self.trade_ledger = self.trade_ledger.append(bt.trade_ledger[bt.trade_ledger['close_date'] >= self.live_test_start_date], ignore_index=True)
 
             self.orders = self.orders.append(bt.broker.get_open_orders(), ignore_index=True)
 
@@ -415,8 +524,6 @@ class CointegrationLiveTester():
         print("****************************** Completed Running Backtests *******************************")
 
         # Here we sum it is_data dataset
-
-
 
         print('\n\n\n')
         print('************************************** Live Closed Trades ****************************************************')
@@ -434,10 +541,16 @@ class CointegrationLiveTester():
 
         display(self.order_summary)
 
+        print('************************************ Current Positions ***************************************************')
+
+        display(self.get_current_positions().sort_values('symbol'))
+
         print(
             '************************************** Target Positions ****************************************************')
 
-        display(self.get_target_positions())
+        display(self.get_target_positions().sort_values('symbol'))
 
+        print("************************************ Order Summary ***************************************************")
+        display(self.get_order_summary().sort_values('symbol'))
 
 

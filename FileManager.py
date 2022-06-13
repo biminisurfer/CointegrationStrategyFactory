@@ -8,10 +8,12 @@ from datetime import datetime
 
 class FileManager():
 
-    def __init__(self, root_dir='stocks'):
+    def __init__(self, root_dir='stocks', ignore_errors=False):
 
         self._root_dir = root_dir
         self.data = None
+        self._ignore_errors = ignore_errors
+        self.errors = []
 
     def _download_symbol_data(self, symbol):
 
@@ -50,6 +52,13 @@ class FileManager():
 
             self.data = self.data[start_date:]
 
+        if len(self.errors) > 0:
+            return False
+        else:
+            return True
+
+
+
 
     def _check_file_exists(self, symbol):
 
@@ -66,11 +75,11 @@ class FileManager():
         start_datetime = datetime.strptime(start, '%Y-%m-%d')
         end_datetime = datetime.strptime(end, '%Y-%m-%d')
 
-        errors = []
+        self.errors = []
 
         if start_datetime < first_date_from_data:
 
-            errors.append(f'The dataset does not go back far enough for this start time. Start Time: {start}, earliest date in the dataset is {first_date_from_data}')
+            self.errors.append(f'The dataset for {symbol} does not go back far enough for this start time. Start Time: {start}, earliest date in the dataset is {first_date_from_data}')
 
         if end_datetime > last_date_from_data:
 
@@ -80,8 +89,8 @@ class FileManager():
 
             self.data = pd.read_csv(f'{self._root_dir}/{symbol}.csv', index_col='Date', parse_dates=True)
 
-        if len(errors) > 0:
+        if len(self.errors) > 0:
 
-            sys.exit(errors)
-
+            if not self._ignore_errors:
+                sys.exit(self.errors)
 

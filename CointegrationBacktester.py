@@ -4,6 +4,7 @@ import pandas as pd
 import yfinance as yf
 import numpy as np
 import statsmodels.api as sm
+
 import math
 import statsmodels.tsa.vector_ar.vecm as vecm
 from statsmodels.tsa.stattools import adfuller
@@ -12,6 +13,7 @@ import datetime
 from tabulate import tabulate
 from pykalman import KalmanFilter
 from hurst import compute_Hc, random_walk
+
 import scipy.stats
 from FileManager import FileManager
 from numpy import linalg as LinAlgError
@@ -1000,6 +1002,7 @@ class CointegrationBacktester():
             self.daily_sharpe_ratio = self.daily_returns_mean / self.daily_returns_std
             self.sharpe_ratio = self.daily_sharpe_ratio * (252 ** 0.5)
 
+
         self.perform_hypothesis_test()
 
         self.max_drawdown = self.get_max_drawdown_backtester_2()
@@ -1015,6 +1018,7 @@ class CointegrationBacktester():
             self.return_over_max_drawdown = 0
         else:
             self.return_over_max_drawdown = self.cumulative_return / self.max_drawdown
+
 
         self.total_trades = len(self.trade_ledger)
 
@@ -1305,7 +1309,8 @@ class CointegrationBacktester():
 
         self.model_dataset[['equity']].plot(figsize=(15, 10))
         self.model_dataset[['z_score']].plot(figsize=(15, 10))
-        self.model_dataset[['upper_open', 'upper_close', 'lower_open', 'lower_close', 'synthetic_equity']].plot(figsize=(15, 10))
+        self.model_dataset[['synthetic_equity']].plot(figsize=(15, 10))
+
         plt.show()
 
 
@@ -1426,6 +1431,7 @@ class CointegrationBacktester():
                 H = .5
             else:
                 H, c, data = compute_Hc(self.jt_sample['synthetic_equity'].values)
+
 
             self.hurst_exponent = H
 
@@ -2043,6 +2049,7 @@ class CointegrationBacktester():
         return -min(Max_Daily_Drawdown)
 
 
+
     def get_max_drawdown(self):
 
         # We are going to use a trailing 252 trading day window
@@ -2143,6 +2150,7 @@ class CointegrationBacktester():
 
 
 
+
     def get_hurst_exponent(self, time_series, max_lag=20):
         """Returns the Hurst Exponent of the time series"""
         lags = range(2, max_lag)
@@ -2159,7 +2167,7 @@ class CointegrationBacktester():
 
         self.os_end_date = self._get_last_day_of_stock_data(self.symbols[0])
 
-        self.os_end_date = '2022-5-19'
+        # self.os_end_date = '2022-5-19'
 
         self.reset()
 
@@ -2168,7 +2176,7 @@ class CointegrationBacktester():
         self.run_backtest_2(print_summary=print_summary)
 
 
-    def live_trade(self, start_date, verbose=False):
+    def live_trade(self, start_date, verbose=False, print_summary=True):
 
         self.force_download = True
 
@@ -2184,7 +2192,7 @@ class CointegrationBacktester():
 
         self._message(f"Max ALlowable DD: {self.max_allowable_drawdown}")
 
-        self.run_backtest_2(max_allowable_drawdown=self.max_allowable_drawdown, verbose=verbose, live_trading=True)
+        self.run_backtest_2(print_summary=print_summary ,max_allowable_drawdown=self.max_allowable_drawdown, verbose=verbose, live_trading=True)
 
         self.print_live_trade_orders()
 

@@ -388,6 +388,8 @@ class CointegrationStrategyFactory():
         }
 
 
+
+
         copper_companies = ['BHP', 'FCX', 'TECK', 'SCCO', 'RIO']
 
         etfs = ['QQQ', 'SPY', 'XLP', 'XLRE', 'XLE', 'XLU', 'XLK', 'XLB', 'XLY', 'XLI', 'XLC', 'XLV']
